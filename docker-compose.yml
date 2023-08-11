@@ -1,0 +1,35 @@
+version: "3"
+
+services:
+  db:
+    container_name: Meeting-Room-Allotment-MongoDB
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    image: mongo:latest
+    restart: always
+    volumes:
+      - ./datadb:/data/db
+  api:
+    build: .
+    command: bash -c "cd meeting_room_allotment_webui && npm install @esbuild/linux-x64 --location=project && npm run build && cd ../meeting_room_allotment_api && npm run build && npm start"
+    container_name: Meeting-Room-Allotment-API
+    depends_on:
+      - db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    image: meeting-room-allotment:api
+    restart: always
+    volumes:
+      - .:/meeting-room-allotment
+  nginx:
+    container_name: Meeting-Room-Allotment-NGINX
+    depends_on:
+      - api
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./certs:/etc/ssl/certs
+      - ./meeting_room_allotment_webui/dist:/var/www/html
